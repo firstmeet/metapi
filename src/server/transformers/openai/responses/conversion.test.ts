@@ -78,6 +78,30 @@ describe('responses conversion single source of truth', () => {
     ]);
   });
 
+  it('drops message items without usable content before forwarding upstream', () => {
+    expect(normalizeResponsesInputForCompatibility([
+      {
+        type: 'message',
+        role: 'developer',
+      },
+      {
+        type: 'message',
+        role: 'user',
+        content: [],
+      },
+      {
+        type: 'message',
+        role: 'user',
+        content: 'hello',
+      },
+    ])).toEqual([
+      {
+        type: 'message',
+        role: 'user',
+        content: [{ type: 'input_text', text: 'hello' }],
+      },
+    ]);
+  });
   it('falls back to non-empty text and image sources when earlier compatibility fields are blank', () => {
     const normalized = normalizeResponsesInputForCompatibility([
       {
