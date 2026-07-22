@@ -35,6 +35,9 @@ const RETRYABLE_CHANNEL_LOCAL_PATTERNS: RegExp[] = [
   /forbidden/i,
   /rate\s+limit/i,
   /quota/i,
+  /余额\s*(?:不足|已用尽|耗尽|低于)/i,
+  /额度\s*(?:不足|已用尽|耗尽|超限)/i,
+  /套餐\s*(?:余额|额度).*(?:不足|已用尽|耗尽|低于|超限)/i,
   /bad\s+gateway/i,
   /gateway\s+time-?out/i,
   /service\s+unavailable/i,
@@ -60,6 +63,9 @@ const SAME_SITE_ENDPOINT_ABORT_PATTERNS: RegExp[] = [
   /too\s+many\s+requests/i,
   /rate\s+limit/i,
   /quota(?:\s+exceeded)?/i,
+  /余额\s*(?:不足|已用尽|耗尽|低于)/i,
+  /额度\s*(?:不足|已用尽|耗尽|超限)/i,
+  /套餐\s*(?:余额|额度).*(?:不足|已用尽|耗尽|低于|超限)/i,
   /bad\s+gateway/i,
   /gateway\s+time-?out/i,
   /service\s+unavailable/i,
@@ -96,6 +102,9 @@ export function shouldRetryProxyRequest(status: number, upstreamErrorText?: stri
 }
 
 export function shouldAbortSameSiteEndpointFallback(status: number, upstreamErrorText?: string | null): boolean {
+  if (matchesAnyPattern(RETRYABLE_CHANNEL_LOCAL_PATTERNS, upstreamErrorText)) {
+    return matchesAnyPattern(SAME_SITE_ENDPOINT_ABORT_PATTERNS, upstreamErrorText);
+  }
   if (status < 500 && status !== 408 && status !== 429) {
     return false;
   }

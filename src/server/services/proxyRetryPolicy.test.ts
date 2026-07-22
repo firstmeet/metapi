@@ -42,6 +42,9 @@ describe('proxyRetryPolicy', () => {
     expect(
       shouldRetryProxyRequest(400, 'Unsupported legacy protocol: /v1/chat/completions is not supported. Please use /v1/responses.'),
     ).toBe(true);
+    expect(
+      shouldRetryProxyRequest(400, '{"error":{"message":"套餐余额不足，请充值后重试"}}'),
+    ).toBe(true);
   });
 
   it('does not retry client-side timeout validation errors', () => {
@@ -62,6 +65,9 @@ describe('proxyRetryPolicy', () => {
     ).toBe(true);
     expect(
       shouldAbortSameSiteEndpointFallback(429, '{"error":{"message":"too many requests"}}'),
+    ).toBe(true);
+    expect(
+      shouldAbortSameSiteEndpointFallback(400, '{"error":{"message":"余额不足"}}'),
     ).toBe(true);
   });
 });
