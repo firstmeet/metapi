@@ -248,6 +248,9 @@ export async function createManualAccount({
   if (tokenType === 'apikey' && body.apiKeyUsage) {
     extraConfigPatch.apiKeyUsage = body.apiKeyUsage;
   }
+  if (body.upstreamEndpoint === 'responses') {
+    extraConfigPatch.upstreamEndpoint = 'responses';
+  }
   const extraConfig = mergeAccountExtraConfig(undefined, extraConfigPatch);
 
   const result = await insertAndGetById<typeof schema.accounts.$inferSelect>({

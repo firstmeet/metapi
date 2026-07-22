@@ -1520,6 +1520,14 @@ export async function accountsRoutes(app: FastifyInstance) {
         });
       }
 
+      if (parsedBody.data.upstreamEndpoint !== undefined) {
+        const baseExtraConfig =
+          typeof updates.extraConfig === 'string' ? updates.extraConfig : account.extraConfig;
+        updates.extraConfig = mergeAccountExtraConfig(baseExtraConfig, {
+          upstreamEndpoint: parsedBody.data.upstreamEndpoint === 'responses' ? 'responses' : undefined,
+        });
+      }
+
       if (parsedBody.data.apiKeyUsage !== undefined) {
         const baseExtraConfig =
           typeof updates.extraConfig === "string"
