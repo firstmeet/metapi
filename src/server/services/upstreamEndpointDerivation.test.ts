@@ -30,6 +30,19 @@ describe('upstreamEndpointDerivation', () => {
     resetUpstreamEndpointRuntimeState();
   });
 
+  it('locks an account to responses without endpoint fallback', async () => {
+    const order = await resolveUpstreamEndpointCandidates(
+      {
+        ...baseContext,
+        account: { ...baseContext.account, extraConfig: JSON.stringify({ upstreamEndpoint: 'responses' }) },
+      },
+      'gpt-5.6-sol',
+      'openai',
+    );
+
+    expect(order).toEqual(['responses']);
+  });
+
   it('derives compact requests directly to responses from the service owner', async () => {
     const order = await resolveUpstreamEndpointCandidates(
       baseContext,

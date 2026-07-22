@@ -50,6 +50,7 @@ export type ApiKeyUsageConfigPatch = Omit<Partial<ApiKeyUsageConfig>, 'lastError
 export const DEFAULT_API_KEY_USAGE_PATH = '/v1/usage';
 
 export type AccountCredentialMode = 'auto' | 'session' | 'apikey';
+export type UpstreamEndpointMode = 'auto' | 'responses';
 
 const VALID_CREDENTIAL_MODES = new Set<AccountCredentialMode>([
   'auto',
@@ -60,6 +61,7 @@ const VALID_CREDENTIAL_MODES = new Set<AccountCredentialMode>([
 type AccountExtraConfig = {
   platformUserId?: unknown;
   credentialMode?: unknown;
+  upstreamEndpoint?: unknown;
   useSystemProxy?: unknown;
   oauth?: {
     provider?: unknown;
@@ -256,6 +258,10 @@ export function getApiKeyUsageRoutingBlockReason(extraConfig?: ExtraConfigInput)
     return `套餐余额低于安全阈值（${usage.remaining} <= ${usage.minRemaining}${usage.unit ? ` ${usage.unit}` : ''}）`;
   }
   return null;
+}
+
+export function getForcedUpstreamEndpoint(extraConfig?: ExtraConfigInput): 'responses' | null {
+  return parseExtraConfig(extraConfig).upstreamEndpoint === 'responses' ? 'responses' : null;
 }
 
 export function getOauthProviderFromExtraConfig(extraConfig?: ExtraConfigInput): string | undefined {

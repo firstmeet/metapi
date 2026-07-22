@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 const accountCredentialModeSchema = z.enum(['auto', 'session', 'apikey']);
+const upstreamEndpointModeSchema = z.enum(['auto', 'responses']);
 
 const apiKeyUsageConfigSchema = z.object({
   enabled: z.boolean(),
@@ -19,6 +20,7 @@ const accountCreatePayloadSchema = z.object({
   checkinEnabled: z.boolean().optional(),
   credentialMode: accountCredentialModeSchema.optional(),
   apiKeyUsage: apiKeyUsageConfigSchema.optional(),
+  upstreamEndpoint: upstreamEndpointModeSchema.optional(),
   refreshToken: z.string().optional(),
   tokenExpiresAt: z.union([z.number(), z.string()]).optional(),
   skipModelFetch: z.boolean().optional(),
@@ -38,6 +40,7 @@ const accountUpdatePayloadSchema = z.object({
   sortOrder: z.number().int().min(0).optional(),
   proxyUrl: z.union([z.string(), z.null()]).optional(),
   apiKeyUsage: apiKeyUsageConfigSchema.optional(),
+  upstreamEndpoint: upstreamEndpointModeSchema.optional(),
 }).passthrough();
 
 const accountBatchPayloadSchema = z.object({
@@ -116,6 +119,9 @@ function formatAccountsPayloadError(error: z.ZodError): string {
   }
   if (firstPath === 'credentialMode') {
     return 'Invalid credentialMode. Expected auto/session/apikey.';
+  }
+  if (firstPath === 'upstreamEndpoint') {
+    return 'Invalid upstreamEndpoint. Expected auto/responses.';
   }
   if (firstPath === 'apiKeyUsage') {
     return 'Invalid apiKeyUsage configuration.';

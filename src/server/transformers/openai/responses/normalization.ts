@@ -237,7 +237,7 @@ function sanitizeResponsesInputToolLifecycle(items: unknown[]): unknown[] {
   return sanitized;
 }
 
-export function normalizeResponsesMessageItem(item: Record<string, unknown>): Record<string, unknown> {
+export function normalizeResponsesMessageItem(item: Record<string, unknown>): Record<string, unknown> | null {
   const type = asTrimmedString(item.type).toLowerCase();
   if (RESPONSES_TOOL_CALL_ITEM_TYPES.has(type) || RESPONSES_TOOL_OUTPUT_ITEM_TYPES.has(type)) {
     return normalizeResponsesToolLifecycleItem(item) ?? item;
@@ -249,7 +249,10 @@ export function normalizeResponsesMessageItem(item: Record<string, unknown>): Re
     role,
   );
 
+  const hasMessageContent = Array.isArray(normalizedContent) && normalizedContent.length > 0;
+
   if (type === 'message') {
+    if (!hasMessageContent) return null;
     return withNormalizedResponsesInputStatus({
       ...item,
       role,
@@ -258,6 +261,7 @@ export function normalizeResponsesMessageItem(item: Record<string, unknown>): Re
   }
 
   if (asTrimmedString(item.role)) {
+    if (!hasMessageContent) return null;
     return withNormalizedResponsesInputStatus({
       ...item,
       type: 'message',
@@ -288,13 +292,15 @@ export function normalizeResponsesInputForCompatibility(input: unknown): unknown
         return normalized ? [toResponsesInputMessageFromText(normalized)] : [];
       }
       if (!isRecord(item)) return [item];
-      return [normalizeResponsesMessageItem(item)];
+      const normalizedItem = normalizeResponsesMessageItem(item);
+      return normalizedItem ? [normalizedItem] : [];
     });
     return sanitizeResponsesInputToolLifecycle(normalized);
   }
 
   if (isRecord(input)) {
-    return sanitizeResponsesInputToolLifecycle([normalizeResponsesMessageItem(input)]);
+    const normalizedItem = normalizeResponsesMessageItem(input);
+    return sanitizeResponsesInputToolLifecycle(normalizedItem ? [normalizedItem] : []);
   }
 
   return input;

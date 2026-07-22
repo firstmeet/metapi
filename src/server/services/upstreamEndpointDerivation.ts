@@ -4,6 +4,7 @@ import {
 } from '../proxy-core/capabilities/conversationFileCapabilities.js';
 import type { UpstreamEndpoint } from '../proxy-core/orchestration/upstreamRequest.js';
 import { fetchModelPricingCatalog } from './modelPricingService.js';
+import { getForcedUpstreamEndpoint } from './accountExtraConfig.js';
 import {
   applyUpstreamEndpointRuntimePreference,
   buildEndpointCapabilityProfile,
@@ -28,6 +29,7 @@ type ChannelContext = {
     id: number;
     accessToken?: string | null;
     apiToken?: string | null;
+    extraConfig?: string | null;
   };
 };
 
@@ -151,6 +153,8 @@ export async function resolveUpstreamEndpointCandidates(
   hints?: EndpointDerivationHints,
 ): Promise<UpstreamEndpoint[]> {
   const sitePlatform = normalizePlatformName(context.site.platform);
+  const forcedEndpoint = getForcedUpstreamEndpoint(context.account.extraConfig);
+  if (forcedEndpoint && hints?.requestKind !== 'claude-count-tokens') return [forcedEndpoint];
   if (hints?.requestKind === 'responses-compact') {
     return ['responses'];
   }
