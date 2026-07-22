@@ -93,7 +93,7 @@ function matchesAnyPattern(patterns: RegExp[], rawMessage?: string | null): bool
 export function shouldRetryProxyRequest(status: number, upstreamErrorText?: string | null): boolean {
   if (status >= 500) return true;
   if (status === 408 || status === 409 || status === 425 || status === 429) return true;
-  if (status === 401 || status === 403) return true;
+  if (status === 401 || status === 402 || status === 403) return true;
   if (isModelUnsupportedErrorMessage(upstreamErrorText)) return true;
   if (matchesAnyPattern(NON_RETRYABLE_REQUEST_PATTERNS, upstreamErrorText)) return false;
   if (matchesAnyPattern(RETRYABLE_CHANNEL_LOCAL_PATTERNS, upstreamErrorText)) return true;
@@ -102,6 +102,7 @@ export function shouldRetryProxyRequest(status: number, upstreamErrorText?: stri
 }
 
 export function shouldAbortSameSiteEndpointFallback(status: number, upstreamErrorText?: string | null): boolean {
+  if (status === 401 || status === 402 || status === 403) return true;
   if (matchesAnyPattern(RETRYABLE_CHANNEL_LOCAL_PATTERNS, upstreamErrorText)) {
     return matchesAnyPattern(SAME_SITE_ENDPOINT_ABORT_PATTERNS, upstreamErrorText);
   }
