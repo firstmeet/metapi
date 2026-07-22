@@ -296,7 +296,7 @@ async function refreshApiKeyUsageBalance(
       .run();
 
     const belowThreshold = snapshot.remaining <= usageConfig.minRemaining;
-    setAccountRuntimeHealth(account.id, {
+    await setAccountRuntimeHealth(account.id, {
       state: snapshot.isValid && !belowThreshold ? 'healthy' : 'degraded',
       reason: !snapshot.isValid
         ? '套餐已失效'
@@ -330,7 +330,7 @@ async function refreshApiKeyUsageBalance(
       })
       .where(eq(schema.accounts.id, account.id))
       .run();
-    setAccountRuntimeHealth(account.id, {
+    await setAccountRuntimeHealth(account.id, {
       state: isAuthFailure ? 'unhealthy' : 'degraded',
       reason: message,
       source: 'balance',
@@ -354,7 +354,7 @@ export async function refreshBalance(accountId: number) {
   const site = rows[0].sites;
 
   if (isSiteDisabled(site.status)) {
-    setAccountRuntimeHealth(account.id, {
+    await setAccountRuntimeHealth(account.id, {
       state: 'disabled',
       reason: '站点已禁用',
       source: 'balance',
@@ -401,7 +401,7 @@ export async function refreshBalance(accountId: number) {
     () => adapter.getBalance(site.url, token, platformUserId));
   const handleBalanceError = async (err: any) => {
     const message = appendSessionTokenRebindHint(err?.message || 'unknown error');
-    setAccountRuntimeHealth(account.id, {
+    await setAccountRuntimeHealth(account.id, {
       state: 'unhealthy',
       reason: message,
       source: 'balance',
@@ -508,7 +508,7 @@ export async function refreshBalance(accountId: number) {
     .where(eq(schema.accounts.id, accountId))
     .run();
 
-  setAccountRuntimeHealth(account.id, {
+  await setAccountRuntimeHealth(account.id, {
     state: keepUnsupportedCheckinDegraded ? 'degraded' : 'healthy',
     reason: keepUnsupportedCheckinDegraded
       ? (existingRuntimeHealth?.reason || '\u7ad9\u70b9\u4e0d\u652f\u6301\u7b7e\u5230\u63a5\u53e3')
