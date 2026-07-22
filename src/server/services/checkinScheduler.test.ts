@@ -6,6 +6,8 @@ const scheduleMock = vi.fn(() => ({
 }));
 const validateMock = vi.fn(() => true);
 const allMock = vi.fn();
+const refreshAllBalancesMock = vi.fn();
+const refreshModelsAndRebuildRoutesMock = vi.fn();
 
 vi.mock('node-cron', () => ({
   default: {
@@ -39,6 +41,14 @@ vi.mock('./checkinService.js', () => ({
   checkinAll: (...args: unknown[]) => allMock(...args),
 }));
 
+vi.mock('./balanceService.js', () => ({
+  refreshAllBalances: (...args: unknown[]) => refreshAllBalancesMock(...args),
+}));
+
+vi.mock('./routeRefreshWorkflow.js', () => ({
+  refreshModelsAndRebuildRoutes: (...args: unknown[]) => refreshModelsAndRebuildRoutesMock(...args),
+}));
+
 describe('checkinScheduler', () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -46,12 +56,26 @@ describe('checkinScheduler', () => {
     scheduleMock.mockClear();
     validateMock.mockClear();
     allMock.mockReset();
+    refreshAllBalancesMock.mockReset();
+    refreshModelsAndRebuildRoutesMock.mockReset();
   });
 
   afterEach(async () => {
     const scheduler = await import('./checkinScheduler.js');
     scheduler.__resetCheckinSchedulerForTests();
     vi.useRealTimers();
+  });
+
+  it('runs a balance and route refresh pass on scheduler startup', async () => {
+    refreshAllBalancesMock.mockResolvedValue(undefined);
+    refreshModelsAndRebuildRoutesMock.mockResolvedValue(undefined);
+    const scheduler = await import('./checkinScheduler.js');
+
+    await scheduler.startScheduler();
+    await Promise.resolve();
+
+    expect(refreshAllBalancesMock).toHaveBeenCalledTimes(1);
+    expect(refreshModelsAndRebuildRoutesMock).toHaveBeenCalledTimes(1);
   });
 
   it('switches from cron mode to interval mode and back', async () => {

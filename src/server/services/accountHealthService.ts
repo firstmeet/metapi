@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { db, schema } from '../db/index.js';
 import {
+  getApiKeyUsageConfig,
   getCredentialModeFromExtraConfig,
   hasOauthProvider,
   mergeAccountExtraConfig,
@@ -89,6 +90,22 @@ function defaultHealthReason(state: RuntimeHealthState): string {
 export function extractRuntimeHealth(extraConfig?: string | Record<string, unknown> | null): RuntimeHealthInfo | null {
   const parsed = parseObject(extraConfig);
   return normalizeRuntimeHealthRecord(parsed.runtimeHealth);
+}
+
+export function shouldPreserveLowApiKeyBalanceHealth(input: {
+  extraConfig?: string | Record<string, unknown> | null;
+  existingHealth: RuntimeHealthInfo | null;
+  nextState: RuntimeHealthState;
+  nextSource?: string | null;
+}): boolean {
+  if (input.nextState !== 'healthy' || input.nextSource !== 'model-discovery') return false;
+  if (input.existingHealth?.state !== 'degraded' || input.existingHealth.source !== 'balance') return false;
+
+  const usageConfig = getApiKeyUsageConfig(input.extraConfig);
+  return !!usageConfig?.enabled
+    && usageConfig.isValid !== false
+    && typeof usageConfig.remaining === 'number'
+    && usageConfig.remaining <= usageConfig.minRemaining;
 }
 
 function isProxyOnlyAuthFailure(
@@ -201,6 +218,16 @@ export async function setAccountRuntimeHealth(
     const query = db.select().from(schema.accounts).where(eq(schema.accounts.id, accountId)) as any;
     const account = typeof query?.get === 'function' ? await query.get() : null;
     if (!account) return null;
+
+    const existingHealth = extractRuntimeHealth(account.extraConfig);
+    if (shouldPreserveLowApiKeyBalanceHealth({
+      extraConfig: account.extraConfig,
+      existingHealth,
+      nextState: input.state,
+      nextSource: input.source,
+    })) {
+      return existingHealth;
+    }
 
     const health = buildRuntimeHealthPatch(input);
     const nextExtraConfig = applyRuntimeHealthToExtraConfig(account.extraConfig, health);

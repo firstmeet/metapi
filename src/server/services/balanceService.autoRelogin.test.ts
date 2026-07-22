@@ -497,6 +497,46 @@ describe('balanceService auto relogin', () => {
     expect(adapterMock.getBalance).not.toHaveBeenCalled();
   });
 
+  it('waits for health persistence before completing a balance refresh', async () => {
+    selectAllMock.mockReturnValue([
+      {
+        accounts: {
+          id: 12,
+          username: 'health-write-account',
+          accessToken: 'active-token',
+          status: 'active',
+          extraConfig: null,
+        },
+        sites: {
+          id: 12,
+          name: 'health-write-site',
+          url: 'https://relay.example.com',
+          platform: 'new-api',
+        },
+      },
+    ]);
+    adapterMock.getBalance.mockResolvedValueOnce({ balance: 10, used: 1, quota: 11 });
+
+    let resolveHealthWrite: (() => void) | undefined;
+    setAccountRuntimeHealthMock.mockImplementation(() => new Promise<void>((resolve) => {
+      resolveHealthWrite = resolve;
+    }));
+
+    const { refreshBalance } = await import('./balanceService.js');
+    const refreshPromise = refreshBalance(12);
+    await vi.waitFor(() => expect(setAccountRuntimeHealthMock).toHaveBeenCalledTimes(1));
+
+    let completed = false;
+    void refreshPromise.then(() => {
+      completed = true;
+    });
+    await Promise.resolve();
+    expect(completed).toBe(false);
+
+    if (!resolveHealthWrite) throw new Error('expected health persistence to start');
+    resolveHealthWrite();
+    await expect(refreshPromise).resolves.toEqual({ balance: 10, used: 1, quota: 11 });
+  });
   it('keeps degraded health when checkin is unsupported but balance refresh succeeds', async () => {
     selectAllMock.mockReturnValue([
       {

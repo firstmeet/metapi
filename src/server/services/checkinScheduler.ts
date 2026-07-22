@@ -158,19 +158,36 @@ function startCheckinSchedule() {
   checkinTask = createCheckinTask(config.checkinCron);
 }
 
-function createBalanceTask(cronExpr: string) {
-  return cron.schedule(cronExpr, async () => {
-    console.log(`[Scheduler] Refreshing balances at ${new Date().toISOString()}`);
+let balanceRefreshPass: Promise<void> | null = null;
+
+export async function runBalanceRefreshPass(trigger: 'startup' | 'cron' = 'cron'): Promise<void> {
+  if (balanceRefreshPass) {
+    console.log(`[Scheduler] Balance refresh already running; reusing ${trigger} trigger`);
+    return balanceRefreshPass;
+  }
+
+  const pass = (async () => {
+    console.log(`[Scheduler] Refreshing balances (${trigger}) at ${new Date().toISOString()}`);
     try {
       await refreshAllBalances();
       await routeRefreshWorkflow.refreshModelsAndRebuildRoutes();
       console.log('[Scheduler] Balance refresh complete');
     } catch (err) {
       console.error('[Scheduler] Balance refresh error:', err);
+    } finally {
+      balanceRefreshPass = null;
     }
-  });
+  })();
+
+  balanceRefreshPass = pass;
+  return pass;
 }
 
+function createBalanceTask(cronExpr: string) {
+  return cron.schedule(cronExpr, async () => {
+    await runBalanceRefreshPass('cron');
+  });
+}
 function createDailySummaryTask(cronExpr: string) {
   return cron.schedule(cronExpr, async () => {
     console.log(`[Scheduler] Sending daily summary at ${new Date().toISOString()}`);
@@ -255,6 +272,8 @@ export async function startScheduler() {
   dailySummaryTask = createDailySummaryTask(activeDailySummaryCron);
   logCleanupTask = createLogCleanupTask(activeLogCleanupCron);
 
+  // Do not wait for upstream probes before accepting requests, but refresh once per process start.
+  void runBalanceRefreshPass('startup');
   console.log(`[Scheduler] Check-in schedule: ${config.checkinScheduleMode} (${config.checkinScheduleMode === 'cron' ? activeCheckinCron : `${config.checkinIntervalHours}h`})`);
   console.log(`[Scheduler] Balance refresh cron: ${activeBalanceCron}`);
   console.log(`[Scheduler] Daily summary cron: ${activeDailySummaryCron}`);
@@ -328,6 +347,7 @@ export function __resetCheckinSchedulerForTests() {
   dailySummaryTask?.stop();
   logCleanupTask?.stop();
   balanceTask = null;
+  balanceRefreshPass = null;
   dailySummaryTask = null;
   logCleanupTask = null;
   intervalAttemptByAccount.clear();

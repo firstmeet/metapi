@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildRuntimeHealthForAccount } from './accountHealthService.js';
+import { buildRuntimeHealthForAccount, shouldPreserveLowApiKeyBalanceHealth } from './accountHealthService.js';
 
 describe('accountHealthService', () => {
   it('marks disabled when site or account is disabled', () => {
@@ -145,6 +145,49 @@ describe('accountHealthService', () => {
     });
   });
 
+  it('preserves low API Key balance degradation when model discovery succeeds', () => {
+    expect(shouldPreserveLowApiKeyBalanceHealth({
+      extraConfig: {
+        credentialMode: 'apikey',
+        apiKeyUsage: {
+          enabled: true,
+          minRemaining: 1,
+          remaining: 0.68,
+          isValid: true,
+        },
+      },
+      existingHealth: {
+        state: 'degraded',
+        reason: '套餐余额 0.68 USD 低于安全阈值 1 USD',
+        source: 'balance',
+        checkedAt: '2026-07-22T06:50:00.000Z',
+      },
+      nextState: 'healthy',
+      nextSource: 'model-discovery',
+    })).toBe(true);
+  });
+
+  it('allows model discovery health after an API Key balance recovers', () => {
+    expect(shouldPreserveLowApiKeyBalanceHealth({
+      extraConfig: {
+        credentialMode: 'apikey',
+        apiKeyUsage: {
+          enabled: true,
+          minRemaining: 1,
+          remaining: 1.01,
+          isValid: true,
+        },
+      },
+      existingHealth: {
+        state: 'degraded',
+        reason: 'previous low balance',
+        source: 'balance',
+        checkedAt: '2026-07-22T06:50:00.000Z',
+      },
+      nextState: 'healthy',
+      nextSource: 'model-discovery',
+    })).toBe(false);
+  });
   it('falls back to unknown when no runtime health info exists', () => {
     const health = buildRuntimeHealthForAccount({
       accountStatus: 'active',

@@ -40,7 +40,13 @@ describe('proxyRetryPolicy', () => {
       shouldRetryProxyRequest(403, '{"error":{"message":"forbidden"}}'),
     ).toBe(true);
     expect(
+      shouldRetryProxyRequest(402, '{"error":{"message":"payment required"}}'),
+    ).toBe(true);
+    expect(
       shouldRetryProxyRequest(400, 'Unsupported legacy protocol: /v1/chat/completions is not supported. Please use /v1/responses.'),
+    ).toBe(true);
+    expect(
+      shouldRetryProxyRequest(400, '{"error":{"message":"套餐余额不足，请充值后重试"}}'),
     ).toBe(true);
   });
 
@@ -55,6 +61,15 @@ describe('proxyRetryPolicy', () => {
 
   it('aborts same-site endpoint fallback on rate-limit and quota responses', () => {
     expect(
+      shouldAbortSameSiteEndpointFallback(401, '{"error":{"message":"invalid api key"}}'),
+    ).toBe(true);
+    expect(
+      shouldAbortSameSiteEndpointFallback(402, '{"error":{"message":"payment required"}}'),
+    ).toBe(true);
+    expect(
+      shouldAbortSameSiteEndpointFallback(403, '{"error":{"message":"forbidden"}}'),
+    ).toBe(true);
+    expect(
       shouldAbortSameSiteEndpointFallback(429, '{"error":{"message":"rate limit exceeded"}}'),
     ).toBe(true);
     expect(
@@ -62,6 +77,9 @@ describe('proxyRetryPolicy', () => {
     ).toBe(true);
     expect(
       shouldAbortSameSiteEndpointFallback(429, '{"error":{"message":"too many requests"}}'),
+    ).toBe(true);
+    expect(
+      shouldAbortSameSiteEndpointFallback(400, '{"error":{"message":"余额不足"}}'),
     ).toBe(true);
   });
 });
